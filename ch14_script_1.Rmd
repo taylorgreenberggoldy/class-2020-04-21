@@ -29,6 +29,20 @@ cces <- read_rds("cces_initial.rds")
 
 2) What proportion of females voted for Trump? 
 
+```{r}
+
+cces %>%
+  arrange(desc(age))
+
+cces %>%
+  filter(gender == "Female") %>%
+  count(trump, gender) %>%
+  mutate(prop = prop.table(n)) %>%
+  head(1) %>%
+  pull()
+
+```
+
 
 # Scene 2
 
@@ -38,7 +52,34 @@ cces <- read_rds("cces_initial.rds")
 
 2) What is the expected vote for Dom - who is Male, 37, holds a 4-year degree (placing him in the 5 `educ` bucket), Asian, makes $77,000, with `ideology` and `party` equal to 3. (Hint: use predict().)
 
+```{r}
 
+logistic_mod <- logistic_reg() %>%
+  set_engine("glm")
+  
+
+logistic_fit <- fit(logistic_mod,
+                    data = cces,
+                    trump ~ gender + age + educ + race + income + party + ideology)
+
+logistic_fit %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+
+```
+
+```{r}
+dom <- tibble(gender = "Male",
+              age = 37,
+              educ = 5,
+              race = "Asian",
+              income = 8,
+              party = 3,
+              ideology = 3)
+
+predict(logistic_fit, new_data = dom)
+
+```
 
 # Scene 3
 
@@ -47,6 +88,35 @@ cces <- read_rds("cces_initial.rds")
 1) Interpret the output of the CART model (Hint: set extra = "auto" in `prp()`.) Where would Dom fall in this decision tree? 
 
 2) Looking at the randomForest model, what does the OOB error tell us? Interpret the first row, second column of the confusion matrix, what does that 920 represent? How does 920 relate to the class.error of 0.078?
+
+
+```{r}
+
+set.seed(1005)
+
+cart_mod <- decision_tree() %>%
+  set_engine("rpart", model = TRUE) %>%
+  set_mode("classification")
+
+cart_fit <- fit(cart_mod,
+                 trump ~
+                   gender + age + educ + race + income + party + ideology, data = cces)
+
+cart_fit$fit %>%
+  prp(extra = "auto")
+```
+
+```{r}
+rf_mod <- rand_forest(mtry = 7, tree = 50) %>%
+  set_engine("randomForest") %>%
+  set_mode("classification")
+
+rf_fit <- fit(rf_mod,
+              data = cces,
+              trump ~ gender + age + educ + race + income + party + ideology)
+  
+
+```
 
 
 
